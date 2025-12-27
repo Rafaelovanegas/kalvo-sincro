@@ -1,0 +1,8 @@
+{
+  "name": "Gemini Creative Studio",
+  "description": "An all-in-one AI power tool for image editing with Gemini 2.5 Flash, text-to-speech generation, and intelligent text analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

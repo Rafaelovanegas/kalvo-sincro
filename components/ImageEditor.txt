@@ -1,0 +1,126 @@
+
+import React, { useState, useRef } from 'react';
+import { editImageWithPrompt } from '../services/geminiService';
+
+const SUGGESTED_EDITS = [
+  "Hazlo estilo dibujo animado",
+  "Cambia el cielo por un atardecer épico",
+  "Añade un gato futurista al lado",
+  "Convierte la imagen en estilo Cyberpunk",
+  "Añade nieve a toda la escena"
+];
+
+const ImageEditor: React.FC = () => {
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSourceImage(reader.result as string);
+        setResultImage(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEdit = async (customPrompt?: string) => {
+    const activePrompt = customPrompt || prompt;
+    if (!sourceImage || !activePrompt) return;
+    setLoading(true);
+    if (customPrompt) setPrompt(customPrompt);
+    
+    try {
+      const base64Data = sourceImage.split(',')[1];
+      const edited = await editImageWithPrompt(base64Data, activePrompt);
+      setResultImage(edited);
+    } catch (err) {
+      console.error(err);
+      alert("Error al editar. Prueba con un prompt más simple.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+        <h2 className="text-2xl font-bold mb-2">Magic Image Editor</h2>
+        <p className="text-slate-500 mb-6">Describe cambios y deja que la IA haga la magia.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <div className="relative aspect-square bg-slate-100 rounded-3xl overflow-hidden border-2 border-dashed border-slate-300 flex items-center justify-center transition-all hover:border-indigo-300">
+              {sourceImage ? (
+                <img src={sourceImage} className="w-full h-full object-cover" alt="Source" />
+              ) : (
+                <div className="text-center p-4">
+                  <span className="text-5xl block mb-4">🖼️</span>
+                  <p className="text-sm text-slate-500 font-medium">Sube tu imagen aquí</p>
+                </div>
+              )}
+            </div>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+            >
+              <span>📂</span> {sourceImage ? 'Cambiar Imagen' : 'Seleccionar Archivo'}
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="relative aspect-square bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 flex items-center justify-center shadow-inner">
+              {loading ? (
+                <div className="text-center">
+                  <div className="animate-spin h-12 w-12 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-indigo-600 font-bold">Generando Magia...</p>
+                </div>
+              ) : resultImage ? (
+                <img src={resultImage} className="w-full h-full object-cover animate-in zoom-in-95 duration-500" alt="Result" />
+              ) : (
+                <p className="text-slate-400 text-sm italic">Tu resultado aparecerá aquí</p>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Ej: Ponle gafas de sol y estilo retro..."
+                className="w-full p-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[80px] text-sm"
+              />
+              
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTED_EDITS.map((s, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => handleEdit(s)}
+                    className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full font-bold hover:bg-indigo-100 transition-colors border border-indigo-100"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                disabled={!sourceImage || !prompt || loading}
+                onClick={() => handleEdit()}
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+              >
+                <span>✨</span> Aplicar Cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ImageEditor;
